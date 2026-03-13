@@ -117,11 +117,23 @@ if __name__ == '__main__':
 
     print(f'Decline rotation: {decline_rotation_rad * 180.0 / np.pi: .2f} degrees')
     print(f'Decline magnetic polar: {decline_polar_rad * 180.0 / np.pi: .2f} degrees')
-    print(f'Phase 0: {f_0 * 180.0 / np.pi: .2f} degrees')
+    print(f'Phase 0: {f_0 * 2.0 * np.pi * 180.0 / np.pi: .2f} degrees')
 
     print(f'Polar Magnetic Field: {b_p0}')
 
     print(f'Average quad magnetic field: {np.sqrt(np.mean(np.square(data['<B_l>'])))} +- {np.sqrt(np.mean(np.square(data['<B_err>'])))}')
+
+    with open('stat_output.txt', 'w') as f:
+        f.write('Statistick data\n')
+
+        f.write(f'Decline rotation: {decline_rotation_rad * 180.0 / np.pi: .2f} degrees\n')
+        f.write(f'Decline magnetic polar: {decline_polar_rad * 180.0 / np.pi: .2f} degrees\n')
+        f.write(f'Phase 0: {f_0 * 2.0 * np.pi * 180.0 / np.pi: .2f} degrees\n')
+
+        f.write(f'Polar Magnetic Field: {b_p0}\n')
+
+        f.write(
+            f'Average quad magnetic field: {np.sqrt(np.mean(np.square(data['<B_l>']))): .2f} +- {np.sqrt(np.mean(np.square(data['<B_err>']))): .2f}')
 
     plt.errorbar(data['phase'], data['<B_l>'], yerr=data['<B_err>'], fmt='.', capsize=2, label='<B_l>')
     plt.plot(true_phase - f_0, longitudinal_magnetic_field_landstreet(true_phase, decline_rotation_rad, decline_polar_rad, b_p0,0.0, 0.0, 0.0), label='True')
