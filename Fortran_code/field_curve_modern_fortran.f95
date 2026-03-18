@@ -19,7 +19,7 @@ program fldcurv
 
     do i = 0, num_of_phase
 
-        phase = step_phase * real(i,8)
+        phase = step_phase * real(i, 8)
 
         call disk_field(ai, beta, phase, bp0, ad, bq, boct, a_ld,  b_ld, bl, bs)
 

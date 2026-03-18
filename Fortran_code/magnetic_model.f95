@@ -32,11 +32,11 @@ subroutine disk_field(ai_deg,beta_deg,phase,bp0,ad,bq,boct,a_ld,b_ld,bl,bs)
 
     real(8), intent(out) :: bl,bs
 
-    integer :: i,j,itot,ju
-    real(8) :: ai,beta,phi
-    real(8) :: x,y,z,r,th
+    integer :: i, j, itot, ju
+    real(8) :: ai, beta, phi
+    real(8) :: x, y, z, r, th
     real(8) :: area
-    real(8) :: bx,by,bz,b
+    real(8) :: bx, by, bz, b
     real(8) :: mu
     real(8) :: weight
     real(8) :: sum_w
