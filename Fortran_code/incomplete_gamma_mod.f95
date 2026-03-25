@@ -5,6 +5,19 @@ module incomplete_gamma_mod
 contains
 
 function upper_incomplete_gamma_function(s, x) result(upper_gamma)
+    implicit none
+    real(8), intent(in) :: s, x
+    real(8) :: upper_gamma
+
+    if (x >= real(s + 1, 8)) then
+        upper_gamma = upper_incomplete_gamma_function_norm(s, x) * gamma(s)
+    else
+        upper_gamma = (1.0_8 - lower_incomplete_gamma_function_norm(s, x)) * gamma(s)
+    end if
+
+end function upper_incomplete_gamma_function
+
+function upper_incomplete_gamma_function_norm(s, x) result(upper_gamma)
     real(8), intent(in) :: s, x
     real(8) :: upper_gamma
     real(8) :: d, c, f, delta, a, b, log_prefix
@@ -39,9 +52,10 @@ function upper_incomplete_gamma_function(s, x) result(upper_gamma)
     end do
 
     upper_gamma = exp(log_prefix) / f
-end function upper_incomplete_gamma_function
 
-function lower_incomplete_gamma_function(s, x) result(lower_gamma)
+end function upper_incomplete_gamma_function_norm
+
+function lower_incomplete_gamma_function_norm(s, x) result(lower_gamma)
     real(8), intent(in) :: s, x
     real(8) :: lower_gamma
     real(8) :: term, sum_val, log_prefix
@@ -65,6 +79,6 @@ function lower_incomplete_gamma_function(s, x) result(lower_gamma)
 
     lower_gamma = sum_val * exp(log_prefix)
 
-end function lower_incomplete_gamma_function
+end function lower_incomplete_gamma_function_norm
 
 end module incomplete_gamma_mod

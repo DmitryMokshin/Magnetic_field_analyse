@@ -92,7 +92,7 @@ function prior_polar_magnetic_field(polar_field) result(distribution)
             do k = 1, num_model_data
                 chi2 = ((model_data(k) - observe_data(i)) / observe_err(i)) ** 2.0_8
                 likelihood_model_data(k) = prior_phase(phases(k)) / log(b_max / b_min) * &
-                & sqrt(2.0_8 / chi2) * (upper_incomplete_gamma_function(0.5_8, chi2 * b_max / 2.0_8) - &
+                & sqrt(2.0_8 / chi2) * (-upper_incomplete_gamma_function(0.5_8, chi2 * b_max / 2.0_8) + &
                 & upper_incomplete_gamma_function(0.5_8, chi2 * b_min / 2.0_8))
             end do
 
@@ -162,13 +162,12 @@ function prior_polar_magnetic_field(polar_field) result(distribution)
         num_i = size(declines_rotation)
         num_bp0 = size(polar_fields)
 
-        dbeta = abs(declines_magnetic_field(2) - declines_magnetic_field(1))
-        di = abs(declines_rotation(2) - declines_rotation(1))
-        dbp0 = abs(polar_fields(2) - polar_fields(1))
+        ! dbeta = abs(declines_magnetic_field(2) - declines_magnetic_field(1))
+        ! di = abs(declines_rotation(2) - declines_rotation(1))
+        ! dbp0 = abs(polar_fields(2) - polar_fields(1))
 
+        !$omp parallel do collapse(3) private(j,k,l,beta,i_angle,bp0) shared(posterior_distribution)
         do j = 1, num_beta
-            call cpu_time(t1)
-            write(*, *) 'Present num ', j, 'Max ', num_beta, 'time mark', t1
             do k = 1, num_i
                 do l = 1, num_bp0
                     beta = declines_magnetic_field(j) 
@@ -180,8 +179,9 @@ function prior_polar_magnetic_field(polar_field) result(distribution)
                 end do
             end do
         end do
+        !$omp end parallel do
 
-        evidence = sum(posterior_distribution) * dbeta * di * dbp0
+        evidence = sum(posterior_distribution) ! * dbeta * di * dbp0
 
         posterior_distribution = posterior_distribution / evidence
 

@@ -86,7 +86,13 @@ def create_one_star(polar_magnetic_field, i_rad, beta_rad, n_phi, resolution, ve
 
     synt_observ = pd.DataFrame({'phase': phases - phase_0, '<B_l>': lmf_measure, '<B_err>': lmf_measure_error})
 
-    synt_observ.to_csv('Test_synt_data.csv', index=False)
+    num_phases = len(synt_observ)
+
+    with open('./Fortran_code/fortran_data.dat', 'w') as f:
+        f.write(f'{num_phases}\n')
+        synt_observ.to_csv(f, index=False, sep=' ', header=False)
+
+    synt_observ.to_csv('Synthetic_data.csv', index=False)
 
     return synt_observ, phase_0
 
@@ -128,7 +134,7 @@ if __name__ == '__main__':
 
     print(f'Average quad magnetic field: {np.sqrt(np.mean(np.square(data['<B_l>'])))} +- {np.sqrt(np.mean(np.square(data['<B_err>'])))}')
 
-    with open('stat_output.txt', 'w') as f:
+    with open('stat_synthetic_data_output.txt', 'w') as f:
         f.write('Statistick data\n')
 
         f.write(f'Decline rotation: {decline_rotation_rad * 180.0 / np.pi: .2f} degrees\n')

@@ -26,14 +26,14 @@ if __name__ == '__main__':
     df = pd.read_csv('Test_synt_data.csv')
 
     # ==================================================================
-    # Подсчет карты, выбор сетки по параметрам. (Рассчет пока на фортране.)
+    # Подсчет карты, выбор сетки по параметрам. (Расчет пока на фортране.)
     # ==================================================================
 
     bp = np.linspace(0, 1.0E+4, 250)
 
-    i_vector = np.linspace(0, np.pi, 37)
+    i_vector = np.linspace(0, np.pi, 36)
     beta_vector = np.linspace(0, np.pi, 36)
-    phi_vector = np.linspace(0, 2.0 * np.pi, 72)
+    phi_vector = np.linspace(0, 1.0, 72)
 
     observe_data = np.array(list(df['<B_l>']))
     observe_err = np.array(list(df['<B_err>']))
