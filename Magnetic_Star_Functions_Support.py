@@ -107,7 +107,7 @@ if __name__ == '__main__':
     decline_rotation_rad = np.random.uniform(0, np.pi)
     decline_polar_rad = np.random.uniform(0, np.pi)
 
-    num_phi = 5
+    num_phi = 15
     vel_sin_i = 35.0
 
     spectrum_resol = 15000.0

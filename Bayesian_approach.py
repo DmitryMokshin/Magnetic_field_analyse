@@ -45,7 +45,13 @@ def analyze_mode(posterior_local, beta_loc, i_loc):
     i_std = np.sqrt(np.sum((i_loc - i_mean) ** 2 * P_i) * d_i)
     bp_std = np.sqrt(np.sum((bp - bp_mean) ** 2 * P_bp) * d_bp)
 
-    return beta_mean, beta_std, i_mean, i_std, bp_mean, bp_std, P_bp
+    # доверительные интервалы
+
+    beta_ci = credible_interval(beta_loc, P_beta, d_beta)
+    i_ci = credible_interval(i_loc, P_i, d_i)
+    bp_ci = credible_interval(bp, P_bp, d_bp)
+
+    return beta_mean, beta_std, i_mean, i_std, bp_mean, bp_std, P_bp, beta_ci, i_ci, bp_ci
 
 def extract_local(posterior, center, window=4):
     ib, ii, _ = center
@@ -166,11 +172,19 @@ if __name__ == '__main__':
     print(f"beta = {res1[0] * 180.0 / np.pi:.4f} ± {res1[1] * 180.0 / np.pi:.4f}")
     print(f"i    = {res1[2] * 180.0 / np.pi:.4f} ± {res1[3] * 180.0 / np.pi:.4f}")
     print(f"B_p  = {res1[4] :.4f} ± {res1[5]:.4f}")
+    print("\n===== 68% credible intervals =====")
+    print(f"beta: {res1[7]}")
+    print(f"i   : {res1[8]}")
+    print(f"B_p : {res1[9]}")
 
     print("\n===== MODE 2 =====")
     print(f"beta = {res2[0] * 180.0 / np.pi:.4f} ± {res2[1] * 180.0 / np.pi:.4f}")
     print(f"i    = {res2[2] * 180.0 / np.pi:.4f} ± {res2[3] * 180.0 / np.pi:.4f}")
     print(f"B_p  = {res2[4]:.4f} ± {res2[5]:.4f}")
+    print("\n===== 68% credible intervals =====")
+    print(f"beta: {res2[7]}")
+    print(f"i   : {res2[8]}")
+    print(f"B_p : {res2[9]}")
 
     # ==================================================================
     # Сравнение по полю
@@ -219,6 +233,7 @@ if __name__ == '__main__':
     # ==================================================================
     # ВЫВОД
     # ==================================================================
+    print("==================================================================")
     print("===== POSTERIOR ESTIMATES (One Mode) =====")
 
     print(f"beta = {beta_mean * 180.0 / np.pi:.4f} ± {beta_std * 180.0 / np.pi:.4f}")
