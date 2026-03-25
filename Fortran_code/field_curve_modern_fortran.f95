@@ -49,7 +49,7 @@ program fldcurv
 
     loc_max = maxloc(posterior_map)
 
-    write(*, *) beta_vector(loc_max(1)), i_vector(loc_max(2)), bp0_vector(loc_max(3))
+    write(*, *) beta_vector(loc_max(1)) * 180.0_8 / pi, i_vector(loc_max(2)) * 180.0_8 / pi, bp0_vector(loc_max(3))
 
     write(*, *) sum(sum(sum(posterior_map, dim=1), dim=1) * bp0_vector)
 
