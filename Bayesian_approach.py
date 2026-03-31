@@ -97,15 +97,19 @@ if __name__ == '__main__':
     beta_vector = np.linspace(0, np.pi, num_beta)
     phi_vector = np.linspace(0, 1.0, num_phases)
 
+    df = pd.read_csv('Test_synt_data.csv')
+
+    print(df.to_latex('test.tex'))
+
     if python_compute:
-        df = pd.read_csv('Test_synt_data.csv')
+
 
         observe_data = np.array(list(df['<B_l>']))
         observe_err = np.array(list(df['<B_err>']))
 
         t_0_1 = time.time()
 
-        posterior_map = magnetic_model.posterior_result(observe_data, observe_err, i_vector, bp, phi_vector)
+        posterior_map = magnetic_model.posterior_result(observe_data, observe_err, i_vector, beta_vector, bp, phi_vector)
 
         num_max = np.argmax(posterior_map)
 
