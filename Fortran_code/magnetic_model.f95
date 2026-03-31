@@ -92,8 +92,8 @@ function prior_polar_magnetic_field(polar_field) result(distribution)
             do k = 1, num_model_data
                 chi2 = ((model_data(k) - observe_data(i)) / observe_err(i)) ** 2.0_8
                 likelihood_model_data(k) = prior_phase(phases(k)) / log(b_max / b_min) * &
-                & sqrt(2.0_8 / chi2) * (-upper_incomplete_gamma_function(0.5_8, chi2 * b_max / 2.0_8) + &
-                & upper_incomplete_gamma_function(0.5_8, chi2 * b_min / 2.0_8))
+                & sqrt(2.0_8 / chi2) * (-up_incom_gamma_func(0.5_8, chi2 * b_max / 2.0_8) + &
+                & up_incom_gamma_func(0.5_8, chi2 * b_min / 2.0_8))
             end do
 
             average_model_data = sum(likelihood_model_data)
@@ -350,20 +350,20 @@ function prior_polar_magnetic_field(polar_field) result(distribution)
 
     end subroutine magnetic_field
 
-    function upper_incomplete_gamma_function(s, x) result(upper_gamma)
+    function up_incom_gamma_func(s, x) result(upper_gamma)
     implicit none
     real(8), intent(in) :: s, x
     real(8) :: upper_gamma
 
     if (x >= real(s + 1, 8)) then
-        upper_gamma = upper_incomplete_gamma_function_norm(s, x) * gamma(s)
+        upper_gamma = up_incom_gamma_func_norm(s, x) * gamma(s)
     else
-        upper_gamma = (1.0_8 - lower_incomplete_gamma_function_norm(s, x)) * gamma(s)
+        upper_gamma = (1.0_8 - low_incom_gamma_func_norm(s, x)) * gamma(s)
     end if
 
-    end function upper_incomplete_gamma_function
+    end function up_incom_gamma_func
 
-    function upper_incomplete_gamma_function_norm(s, x) result(upper_gamma)
+    function up_incom_gamma_func_norm(s, x) result(upper_gamma)
         real(8), intent(in) :: s, x
         real(8) :: upper_gamma
         real(8) :: d, c, f, delta, a, b, log_prefix
@@ -399,9 +399,9 @@ function prior_polar_magnetic_field(polar_field) result(distribution)
 
         upper_gamma = exp(log_prefix) / f
 
-    end function upper_incomplete_gamma_function_norm
+    end function up_incom_gamma_func_norm
 
-    function lower_incomplete_gamma_function_norm(s, x) result(lower_gamma)
+    function low_incom_gamma_func_norm(s, x) result(lower_gamma)
         real(8), intent(in) :: s, x
         real(8) :: lower_gamma
         real(8) :: term, sum_val, log_prefix
@@ -425,6 +425,6 @@ function prior_polar_magnetic_field(polar_field) result(distribution)
 
         lower_gamma = sum_val * exp(log_prefix)
 
-    end function lower_incomplete_gamma_function_norm
+    end function low_incom_gamma_func_norm
 
 end module magnetic_model
