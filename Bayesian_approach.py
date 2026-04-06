@@ -86,7 +86,6 @@ if __name__ == '__main__':
     python_compute = False
     phase_mode = True
 
-    num_phases = 72
     num_i = 36
     num_beta = 36
     num_bp0 = 500
@@ -94,9 +93,15 @@ if __name__ == '__main__':
     bp = np.linspace(0, 4.0E+4, num_bp0)
     i_vector = np.linspace(0, np.pi, num_i)
     beta_vector = np.linspace(0, np.pi, num_beta)
-    phi_vector = np.linspace(0, 1.0, num_phases)
 
     df = pd.read_csv('Test_synt_data.csv')
+
+    if phase_mode:
+        phi_vector = df['phase'].values
+        num_phases = len(phi_vector)
+    else:
+        num_phases = 72
+        phi_vector = np.linspace(0, 1.0, num_phases)
 
     # ==================================================================
     # COMPUTE / LOAD
