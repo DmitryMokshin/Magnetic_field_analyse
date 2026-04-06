@@ -14,5 +14,10 @@ clear:
 clean:
 	rm -f *.o *.mod prog
 make_python_bib: prog magnetic_model.f95
-	f2py -c magnetic_model.f95 --fcompiler=gfortran --f90flags='-fopenmp' -lgomp -m magnetic_model
+	f2py -c magnetic_model.f95 \
+  --fcompiler=gfortran \
+  --f90flags='-O3 -fopenmp' \
+  --opt='-O3 -fopenmp' \
+  -lgomp \
+  -m magnetic_model
 	mv magnetic_model.cpython-312-x86_64-linux-gnu.so ../magnetic_model.cpython-312-x86_64-linux-gnu.so

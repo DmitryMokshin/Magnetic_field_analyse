@@ -71,11 +71,11 @@ function prior_polar_magnetic_field(polar_field) result(distribution)
 
     end function prior_scale_coef
 
-    function likelihood_mod(observe_data, observe_err, model_data, phases) result(likelihood)
+    function likelihood_mod(observe_data, observe_err, model_data, phases) result(log_likelihood)
     implicit none
         real(8), intent(in), dimension(:) :: observe_data, observe_err, model_data, phases
-        real(8) :: likelihood
-        real(8) :: chi2, average_model_data
+        real(8) :: log_likelihood
+        real(8) :: chi2, average_model_data, constant_0, p, x_min, x_max
         real(8), dimension(size(observe_data)) :: likelihood_observ_data
         real(8), dimension(size(model_data)) :: likelihood_model_data
         integer :: i, k, num_model_data, num_observ
@@ -87,30 +87,35 @@ function prior_polar_magnetic_field(polar_field) result(distribution)
         num_model_data = size(model_data)
         num_observ = size(observe_data)
 
+        constant_0 = (log(b_max / b_min)) ** (-1.0_8) / num_model_data
+
         do i = 1, num_observ
             do k = 1, num_model_data
                 chi2 = ((model_data(k) - observe_data(i)) / observe_err(i)) ** 2.0_8
-                chi2 = max(chi2, 1.0D-12)
-                likelihood_model_data(k) = prior_phase(phases(k)) / log(b_max / b_min) * &
-                & sqrt(2.0_8 / chi2) * (-up_incom_gamma_func(0.5_8, chi2 * b_max / 2.0_8) + &
-                & up_incom_gamma_func(0.5_8, chi2 * b_min / 2.0_8))
+                chi2 = max(chi2, eps)
+                x_min = chi2 * b_min / 2.0_8
+                x_max = chi2 * b_max / 2.0_8
+                p = prior_phase(phases(k)) * constant_0 / observe_err(i) / sqrt(chi2) * &
+                & (exp(-x_min) * erfc_scaled(sqrt(x_min)) - exp(-x_max) * erfc_scaled(sqrt(x_max)))
+                p = max(p, eps)
+                likelihood_model_data(k) = log(p)
             end do
 
-            average_model_data = sum(likelihood_model_data)
+            average_model_data = log_sum_exp(likelihood_model_data)
 
-            likelihood_observ_data(i) = 1.0_8 / observe_err(i) * average_model_data
+            likelihood_observ_data(i) = average_model_data
 
         end do
 
-        likelihood = product(likelihood_observ_data) * (sqrt(1.0_8 / 2.0_8 / pi) / real(num_model_data, 8)) ** real(num_observ, 8)
+        log_likelihood = sum(likelihood_observ_data)
 
     end function likelihood_mod
 
-    function likelihood_mod_with_phase(observe_data, observe_err, model_data) result(likelihood)
+    function likelihood_mod_with_phase(observe_data, observe_err, model_data) result(log_likelihood)
     implicit none
         real(8), intent(in), dimension(:) :: observe_data, observe_err, model_data
-        real(8) :: likelihood
-        real(8) :: chi2
+        real(8) :: log_likelihood
+        real(8) :: chi2, x_min, x_max, p
         real(8), dimension(size(observe_data)) :: likelihood_observ_data
         integer :: k, num_observ
         real(8) :: b_min, b_max, constant_1
@@ -120,16 +125,20 @@ function prior_polar_magnetic_field(polar_field) result(distribution)
 
         num_observ = size(observe_data)
 
-        constant_1 = log((sqrt(pi) * log(b_max / b_min)) ** (-num_observ))
+        constant_1 = log((sqrt(pi) * log(b_max / b_min)) ** (-real(num_observ, 8)))
 
         do k = 1, num_observ
             chi2 = ((observe_data(k) - model_data(k)) / observe_err(k)) ** 2.0_8
-            chi2 = max(chi2, 1.0D-12)
-            likelihood_observ_data(k) = 1.0_8 / observe_err(k) / sqrt(chi2) * &
-            & (up_incom_gamma_func(0.5_8, 0.5_8 * chi2 * b_min) - up_incom_gamma_func(0.5_8, 0.5_8 * chi2 * b_max))
+            chi2 = max(chi2, eps)
+            x_min = 0.5_8 * chi2 * b_min
+            x_max = 0.5_8 * chi2 * b_max
+            p = sqrt(pi) / observe_err(k) / sqrt(chi2) * &
+            & (exp(-x_min) * erfc_scaled(sqrt(x_min)) - exp(-x_max) * erfc_scaled(sqrt(x_max)))
+            p = max(p, eps)
+            likelihood_observ_data(k) = log(p)
         end do
 
-        likelihood = product(likelihood_observ_data) * pi ** (-num_observ / 2.0_8) / log(b_max / b_min) ** num_observ
+        log_likelihood = sum(likelihood_observ_data) + constant_1
 
     end function likelihood_mod_with_phase
 
@@ -144,13 +153,13 @@ function prior_polar_magnetic_field(polar_field) result(distribution)
     end subroutine prior_result_by_value
 
     subroutine posterior_by_value(observe_data, observe_data_err, decline_rotation, decline_magnetic_field, & 
-    & polar_field, phases, posterior_distribution)
+    & polar_field, phases, log_posterior_distribution)
     implicit none
         real(8), intent(in) :: decline_rotation, decline_magnetic_field, &
         & polar_field
         real(8), intent(in), dimension(:) :: phases, observe_data, observe_data_err
-        real(8), intent(out) :: posterior_distribution
-        real(8) :: likelihood, prior_distribution
+        real(8), intent(out) :: log_posterior_distribution
+        real(8) :: log_likelihood, prior_distribution
         real(8), dimension(size(phases)) :: model_data
         integer :: i, num_observ_data, num_model_data
 
@@ -165,20 +174,22 @@ function prior_polar_magnetic_field(polar_field) result(distribution)
             &0.0_8, 0.0_8, 0.0_8, 0.35_8, 0.25_8, model_data(i))
         end do
 
-        likelihood = likelihood_mod(observe_data, observe_data_err, model_data, phases)
+        log_likelihood = likelihood_mod(observe_data, observe_data_err, model_data, phases)
 
-        posterior_distribution = prior_distribution * likelihood
+        prior_distribution = max(prior_distribution, eps)
+
+        log_posterior_distribution = log(prior_distribution) + log_likelihood
 
     end subroutine posterior_by_value
 
     subroutine posterior_by_value_with_phase(observe_data, observe_data_err, decline_rotation, decline_magnetic_field, & 
-    & polar_field, phases, posterior_distribution)
+    & polar_field, phases, log_posterior_distribution)
     implicit none
         real(8), intent(in) :: decline_rotation, decline_magnetic_field, &
         & polar_field
         real(8), intent(in), dimension(:) :: phases, observe_data, observe_data_err
-        real(8), intent(out) :: posterior_distribution
-        real(8) :: likelihood, prior_distribution
+        real(8), intent(out) :: log_posterior_distribution
+        real(8) :: log_likelihood, prior_distribution
         real(8), dimension(size(observe_data)) :: model_data
         integer :: i, num_observ_data
 
@@ -192,9 +203,11 @@ function prior_polar_magnetic_field(polar_field) result(distribution)
             &0.0_8, 0.0_8, 0.0_8, 0.35_8, 0.25_8, model_data(i))
         end do
 
-        likelihood = likelihood_mod_with_phase(observe_data, observe_data_err, model_data)
+        log_likelihood = likelihood_mod_with_phase(observe_data, observe_data_err, model_data)
 
-        posterior_distribution = prior_distribution * likelihood
+        prior_distribution = max(prior_distribution, eps)
+
+        log_posterior_distribution = log(prior_distribution) + log_likelihood
 
     end subroutine posterior_by_value_with_phase
 
@@ -207,7 +220,7 @@ function prior_polar_magnetic_field(polar_field) result(distribution)
         &) :: posterior_distribution
         integer :: num_beta, num_i, num_bp0
         integer :: j, k, l
-        real(8) :: evidence, beta, i_angle, bp0
+        real(8) :: beta, i_angle, bp0
         logical :: phase_mod
 
         num_beta = size(declines_magnetic_field)
@@ -245,10 +258,6 @@ function prior_polar_magnetic_field(polar_field) result(distribution)
             end do
             !$omp end parallel do
         end if
-
-        evidence = sum(posterior_distribution)
-
-        posterior_distribution = posterior_distribution / evidence
 
     end subroutine posterior_result
 
@@ -415,85 +424,6 @@ function prior_polar_magnetic_field(polar_field) result(distribution)
         bz = -bxr*sai + bzr*cai
 
     end subroutine magnetic_field
-
-    function up_incom_gamma_func(s, x) result(upper_gamma)
-    implicit none
-        real(8), intent(in) :: s, x
-        real(8) :: upper_gamma
-
-        if (x >= real(s + 1, 8)) then
-            upper_gamma = up_incom_gamma_func_norm(s, x) * gamma(s)
-        else
-            upper_gamma = (1.0_8 - low_incom_gamma_func_norm(s, x)) * gamma(s)
-        end if
-
-    end function up_incom_gamma_func
-
-    function up_incom_gamma_func_norm(s, x) result(upper_gamma)
-    implicit none
-        real(8), intent(in) :: s, x
-        real(8) :: upper_gamma
-        real(8) :: d, c, f, delta, a, b, log_prefix
-        integer :: j
-
-        if (x <= 0.0_8) then
-            upper_gamma = 1.0_8
-            return
-        end if
-
-        log_prefix = s * log(x) - x - log_gamma(s)
-
-        f = x
-        if (abs(f) < eps) f = eps
-        c = f
-        d = 0.0_8
-
-        do j = 1, max_iter
-            a = -real(j, 8) * (real(j, 8) - s)
-            b = 2.0_8 * j + 1.0_8 - s + x
-            
-            d = b + a * d
-            if (abs(d) < eps) d = eps
-            c = b + a / c
-            if (abs(c) < eps) c = eps
-            
-            d = 1.0_8 / d
-            delta = c * d
-            f = f * delta
-            
-            if (abs(delta - 1.0_8) < eps) exit
-        end do
-
-        upper_gamma = exp(log_prefix) / f
-
-    end function up_incom_gamma_func_norm
-
-    function low_incom_gamma_func_norm(s, x) result(lower_gamma)
-    implicit none
-        real(8), intent(in) :: s, x
-        real(8) :: lower_gamma
-        real(8) :: term, sum_val, log_prefix
-        integer :: i
-
-        if (x <= 0.0_8) then
-            lower_gamma = 0.0_8
-            return
-        end if
-
-        log_prefix = s * log(x) - x - log_gamma(s)
-
-        term = 1.0_8 / s
-        sum_val = term
-
-        do i = 1, max_iter
-            term = term * (x / (s + real(i, 8)))
-            sum_val = sum_val + term
-            if (abs(term) < abs(sum_val) * eps) exit
-        end do
-
-        lower_gamma = sum_val * exp(log_prefix)
-
-    end function low_incom_gamma_func_norm
 
     function log_sum_exp(input_vector) result(result_sum)
         real(8), intent(in), dimension(:) :: input_vector
