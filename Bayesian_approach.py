@@ -110,10 +110,8 @@ def analyze_and_visualize_posterior(log_posterior_map, beta_vec, i_vec, bp_vec, 
     P_beta_bp = np.sum(posterior, axis=1)
     P_i_bp = np.sum(posterior, axis=0)
 
-    # Поиск локальных максимумов
-    # Если явно находятся лишние пики, срочно увеличить threshold_ratio, по сути уровень сигнала, ниже которого искать не стоит.
-    # Также аргументом существует максимум количества пиков (max_modes). Тоже можно увеличить в случае чего.
-    modes = find_all_modes_deflation(posterior, r_beta=3, r_i=3, r_bp=35, threshold_ratio=0.08)
+    # Поиск локальных максимумов (с обновленными параметрами фильтрации)
+    modes = find_all_modes_deflation(posterior, r_beta=4, r_i=4, r_bp=45, threshold_ratio=0.07)
 
     print(f"\n[{star_name}] Найдено значимых изолированных мод: {len(modes)}")
 
@@ -154,39 +152,44 @@ def analyze_and_visualize_posterior(log_posterior_map, beta_vec, i_vec, bp_vec, 
             "bp": {"mean": bp_mean, "std": bp_std, "ci_68": bp_ci_68, "ci_95": bp_ci_95}
         })
 
+    # ==================================================================
+    # ВЫЧИСЛЕНИЕ ГЛОБАЛЬНОГО МАКСИМУМА АПОСТЕРИОРНОЙ ВЕРОЯТНОСТИ (MAP)
+    # ==================================================================
     global_max_idx = np.unravel_index(np.argmax(log_posterior_map), log_posterior_map.shape)
     beta_map = beta_vec[global_max_idx[0]] * rad2deg
     i_map = i_vec[global_max_idx[1]] * rad2deg
     bp_map = bp_vec[global_max_idx[2]]
 
-    print("\n" + "=" * 50)
+    print("\n" + "=" * 60)
     print(" GLOBAL MAXIMUM A POSTERIORI (MAP) ESTIMATE:")
-    print("=" * 50)
+    print("=" * 60)
     print(f"Индексы ячейки сетки: {global_max_idx}")
     print(f"beta (MAP) = {beta_map:.2f}°")
     print(f"i    (MAP) = {i_map:.2f}°")
     print(f"B_p  (MAP) = {bp_map:.1f} G")
-    print("=" * 50 + "\n")
+    print("=" * 60 + "\n")
 
     # Отрисовка чистого финального графика
     if show_plot:
-        fig, axes = plt.subplots(3, 3, figsize=(17, 10))
+        fig, axes = plt.subplots(3, 3, figsize=(19, 10))
 
         params = [beta_vec, i_vec, bp_vec]
         labels = [r"$\beta$ (rad)", r"$i$ (rad)", r"$B_p$ (G)"]
         P_1D = [P_beta, P_i, P_bp]
 
-        mode_colors = ['red', 'darkorange', 'magenta', 'cyan', 'lime']
+        # Контрастные цвета для маркеров мод на черно-белом фоне
+        mode_colors = ['red', 'darkorange', 'magenta', 'cyan', 'lime', 'blue']
 
-        # 1. Чистая диагональ (1D маргиналы без вертикальных линий)
+        # 1. Чистая диагональ (1D маргиналы)
         for i in range(3):
             ax = axes[i, i]
             ax.plot(params[i], P_1D[i], color='black', lw=1.5, zorder=2)
             ax.fill_between(params[i], P_1D[i], alpha=0.15, color='gray')
             ax.set_title(labels[i], fontsize=12)
             ax.set_yticks([])
+            ax.set_xlim(params[i].min(), params[i].max())
 
-        # 2. Внедиагональные 2D карты со шкалами
+        # 2. Внедиагональные 2D карты (Палитра заменена на черно-белую 'gray_r')
         pairs = {
             (1, 0): P_beta_i,
             (2, 0): P_beta_bp,
@@ -195,7 +198,11 @@ def analyze_and_visualize_posterior(log_posterior_map, beta_vec, i_vec, bp_vec, 
 
         for (i, j), P_2d in pairs.items():
             P_s = gaussian_filter(P_2d, sigma=1.0)
-            contour = axes[i, j].contourf(params[j], params[i], P_s.T, levels=25, cmap='viridis')
+            # Применяем черно-белую палитру gray_r
+            contour = axes[i, j].contourf(params[j], params[i], P_s.T, levels=25, cmap='gray_r')
+
+            axes[i, j].set_xlim(params[j].min(), params[j].max())
+            axes[i, j].set_ylim(params[i].min(), params[i].max())
 
             cbar = fig.colorbar(contour, ax=axes[i, j], fraction=0.046, pad=0.04)
             cbar.ax.tick_params(labelsize=8)
@@ -209,7 +216,7 @@ def analyze_and_visualize_posterior(log_posterior_map, beta_vec, i_vec, bp_vec, 
                 axes[i, j].scatter(params[j][coords_2d[j]], params[i][coords_2d[i]],
                                    color=color, marker='x', s=55, lw=2.2)
 
-        # 3. Чистая легенда (только маркеры мод и их значимость)
+        # 3. Чистая легенда
         legend_elements = []
         for m_idx, m_data in enumerate(modes_metrics):
             color = mode_colors[m_idx % len(mode_colors)]
@@ -230,7 +237,27 @@ def analyze_and_visualize_posterior(log_posterior_map, beta_vec, i_vec, bp_vec, 
         for i in range(3):
             axes[i, 0].set_ylabel(labels[i], fontsize=10)
 
+        # ==================================================================
+        # СИНХРОНИЗАЦИЯ ГЕОМЕТРИИ ОСЕЙ
+        # ==================================================================
+        # Сначала вызываем tight_layout, чтобы зафиксировать базовые позиции
         plt.tight_layout()
+
+        # Колонка 0: сжимаем 1D график (0,0) до точной ширины 2D графика (1,0) под ним
+        pos_2d_col0 = axes[1, 0].get_position()
+        pos_1d_col0 = axes[0, 0].get_position()
+        axes[0, 0].set_position([pos_2d_col0.x0, pos_1d_col0.y0, pos_2d_col0.width, pos_1d_col0.height])
+
+        # Колонка 1: сжимаем 1D график (1,1) до точной ширины 2D графика (2,1) под ним
+        pos_2d_col1 = axes[2, 1].get_position()
+        pos_1d_col1 = axes[1, 1].get_position()
+        axes[1, 1].set_position([pos_2d_col1.x0, pos_1d_col1.y0, pos_2d_col1.width, pos_1d_col1.height])
+
+        # Колонка 2: у 1D графика (2,2) нет соседа снизу, но для идеальной симметрии всей сетки сужаем и его
+        pos_1d_col2 = axes[2, 2].get_position()
+        axes[2, 2].set_position([pos_1d_col2.x0, pos_1d_col2.y0, pos_2d_col1.width, pos_1d_col2.height])
+        # ==================================================================
+
         plot_filename = f"{star_name}_corner_plot.png"
         plt.savefig(plot_filename, dpi=300)
         print(f"\n[График сохранен]: {plot_filename}")
