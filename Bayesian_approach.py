@@ -5,6 +5,7 @@ from matplotlib.lines import Line2D
 from scipy.ndimage import gaussian_filter
 from scipy.special import logsumexp
 import pandas as pd
+from astropy.timeseries import LombScargle
 
 
 # ==================================================================
@@ -276,7 +277,14 @@ def analyze_and_visualize_posterior(log_posterior_map, beta_vec, i_vec, bp_vec, 
 # ==================================================================
 
 def process_star_data(star_name, observ_data='Test_synt_data.csv', python_compute=False, phase_mode=True):
-    """"""
+    """
+
+    :param star_name: string: Название звезды
+    :param observ_data: string: путь к файлу с наблюдаемыми данными, нужен только для подхода через питон.
+    :param python_compute: logical: переменная включения и отключения работы через питон
+    :param phase_mode: logical: переменная включения/отключения работы в режиме с известными фазами.
+    :return:
+    """
     print(f"\n" + "=" * 60)
     print(f" СТАРТ ПОЛНОГО АНАЛИЗА ДЛЯ ЗВЕЗДЫ: {star_name}")
     print("=" * 60)
@@ -288,7 +296,7 @@ def process_star_data(star_name, observ_data='Test_synt_data.csv', python_comput
 
     num_i = 36
     num_beta = 36
-    num_bp0 = 500
+    num_bp0 = 750
     num_phases = 72
 
     bp = np.linspace(0, 4.0E+4, num_bp0)
@@ -347,6 +355,109 @@ def process_star_data(star_name, observ_data='Test_synt_data.csv', python_comput
     return results
 
 
+def compute_period_by_ls(time_series, magnetic_field_long, err_magnetic_field_long, plot=False):
+    ls = LombScargle(time_series, magnetic_field_long, err_magnetic_field_long)
+
+    # Автоматически вычисленная сетка частот и мощность периодограммы. В более менее разумных пределах.
+    frequency, power = ls.autopower(
+        minimum_frequency=1 / 20.0, maximum_frequency=1 / 0.2
+    )
+
+    # Максимальная частота
+    best_freq = frequency[np.argmax(power)]
+    best_period = 1.0 / best_freq
+
+    # Вычисление False Alarm Probability (FAP) для максимального пика
+    fap = ls.false_alarm_probability(power.max())
+
+    print(f"Наилучший найденный период: {best_period:.5f} дн.")
+    print(f"Вероятность ложной тревоги (FAP): {fap:.2e}")
+
+    # ==========================================
+    # 3. ПОСТРОЕНИЕ ГРАФИКОВ
+    # ==========================================
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+
+    # Левый график: Периодограмма
+    ax1.plot(1.0 / frequency, power, color="black", lw=1.5)
+    ax1.axvline(best_period, color="red", linestyle="--", alpha=0.7,
+                label=f"P = {best_period:.3f} d")
+    ax1.set_title("Периодограмма Ломба — Скаргла")
+    ax1.set_xlabel("Период (дни)")
+    ax1.set_ylabel("Мощность (Power)")
+    ax1.set_xscale("log")
+    ax1.grid(True, which="both", alpha=0.3)
+    ax1.legend()
+
+    # Правый график: Свернутая фазовая кривая (магнитная кривая)
+    # Вычисление фазы для каждой точки: фаза = дробная часть ( (t - t0) / P )
+    t0 = time_series[0]  # начальная эпоха
+    phases = np.remainder(time_series - t0, best_period) / best_period
+
+    phases_extended = np.concatenate([phases, phases + 1.0])
+    B_extended = np.concatenate([magnetic_field_long, magnetic_field_long])
+    e_extended = np.concatenate([err_magnetic_field_long, err_magnetic_field_long])
+
+    ax2.errorbar(phases_extended, B_extended, yerr=e_extended, fmt="o",
+                 color="darkblue", ecolor="gray", capsize=3, elinewidth=1,
+                 alpha=0.8, label="Данные")
+
+    # Построение плавной аналитической кривой по найденному периоду
+    phase_fit = np.linspace(0, 2, 200)
+    t_fit = t0 + phase_fit * best_period
+    B_fit = ls.model(t_fit, best_freq)
+    ax2.plot(phase_fit, B_fit, color="crimson", lw=2, label="Модель")
+
+    ax2.set_title("Магнитная кривая (свернутая по фазе)")
+    ax2.set_xlabel("Фаза вращения")
+    ax2.set_ylabel("Магнитное поле (Гс)")
+    ax2.set_xlim(0, 2)
+    ax2.grid(True, alpha=0.3)
+    ax2.legend()
+
+    plt.tight_layout()
+    if plot:
+        plt.show()
+    else:
+        plt.close()
+
+    return best_period, fap
+
+
 if __name__ == '__main__':
-    star = "HD118022"
-    star_results = process_star_data(star, python_compute=False, phase_mode=True)
+    star = "52her_liter"
+    jd0 = 2453600.975
+    p0 = 3.8575
+
+    dir_name_test_star = 'test_stars'
+    dir_fortran_code = './Fortran_code/fortran_data.dat'
+
+    observ_data_init = pd.read_csv(f"{dir_name_test_star}/{star}", sep=';')
+
+    t = observ_data_init['JD']
+    B = observ_data_init['Bl']
+    e = observ_data_init['errBl']
+
+    p0_new, _ = compute_period_by_ls(t, B, e)
+
+    phase_data_init = np.remainder(t - jd0, p0) / p0
+
+    observ_data_init['phase'] = phase_data_init
+
+    num_random_phase = 5
+    num_phases_init = len(phase_data_init)
+
+    rng = np.random.default_rng()
+
+    index_phase = rng.choice(np.arange(0, num_phases_init), size=num_random_phase, replace=False)
+
+    with open(dir_fortran_code, 'w') as f:
+        f.write(f'{num_random_phase}\n')
+        observ_data_init.iloc[index_phase].sort_values(by='phase').to_csv(f, index=False,
+                                                                          columns=['phase', 'Bl', 'errBl'],
+                                                                          header=False, sep=' ')
+
+    observ_data_init.iloc[index_phase].sort_values(by='phase').to_csv('Test_synt_data.csv', index=False,
+                                                                      columns=['phase', 'Bl', 'errBl'])
+
+    star_results = process_star_data(star + f'_{num_random_phase}', python_compute=False, phase_mode=True)

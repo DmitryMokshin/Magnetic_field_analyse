@@ -18,7 +18,7 @@ program fldcurv
 
     num_i = 36
     num_beta = 36
-    num_bp0 = 500
+    num_bp0 = 750
 
     allocate(i_vector(1:num_i), beta_vector(1:num_beta), bp0_vector(1:num_bp0))
     allocate(observ_magnetic_field(1:num_observ), observ_err_magnetic_field(1:num_observ))
