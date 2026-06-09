@@ -11,14 +11,20 @@ program fldcurv
 
     open(15, file='fortran_data.dat', status='old', action='read')
     open(16, file='fortran_maps_output.dat', status='old', action='write')
+    open(17, file='fortran_settings.dat', status='old', action='read')
+
+    read(17, *) phase_mod
+    read(17, *) num_i, num_beta, num_bp0, num_phases
+
+    ! Файд fortran_settings.dat, содержит в себе настройки для вероятностных вычислений.
+    ! Первая строчка это выбор режима .TRUE. значит будет с учетом знания фаз магнитных измерений. Из-за чего в файле должен быть соответствующий первый столбец.
+    ! .FALSE. входной файл, должен вмещать в себя только магнитное поле и ошибки два столбца соответственно. 
+    ! В обоих случаях первой строкой стоит количество измерений.
+    ! Вторая строка настроечного файла. Содержит количество точек разбиения для углов наклона i,
+    ! количество точек разбиения наклона магнитного поля, количество разбиений поля (формально от 0 до 40 кГс), 
+    ! И последнее число количество фаз.
 
     read(15, *) num_observ
-
-    phase_mod = .TRUE.
-
-    num_i = 36
-    num_beta = 36
-    num_bp0 = 750
 
     allocate(i_vector(1:num_i), beta_vector(1:num_beta), bp0_vector(1:num_bp0))
     allocate(observ_magnetic_field(1:num_observ), observ_err_magnetic_field(1:num_observ))
@@ -50,8 +56,6 @@ program fldcurv
     else
 
         write(*, *) 'Start Compute without phase'
-
-        num_phases = 72
 
         allocate(phase_vector(1:num_phases))
 

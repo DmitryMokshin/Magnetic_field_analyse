@@ -296,7 +296,7 @@ def process_star_data(star_name, observ_data='Test_synt_data.csv', python_comput
 
     num_i = 36
     num_beta = 36
-    num_bp0 = 750
+    num_bp0 = 500
     num_phases = 72
 
     bp = np.linspace(0, 4.0E+4, num_bp0)
@@ -426,11 +426,16 @@ def compute_period_by_ls(time_series, magnetic_field_long, err_magnetic_field_lo
 
 if __name__ == '__main__':
     star = "52her_liter"
+    num_random_phase = 5
+
+    num_of_test = 20
+
+    dir_name_test_star = 'test_stars'
+
     jd0 = 2453600.975
     p0 = 3.8575
 
-    dir_name_test_star = 'test_stars'
-    dir_fortran_code = './Fortran_code/fortran_data.dat'
+    phase_mode_test = False
 
     observ_data_init = pd.read_csv(f"{dir_name_test_star}/{star}", sep=';')
 
@@ -444,20 +449,33 @@ if __name__ == '__main__':
 
     observ_data_init['phase'] = phase_data_init
 
-    num_random_phase = 5
     num_phases_init = len(phase_data_init)
 
-    rng = np.random.default_rng()
+    for i in range(num_of_test):
 
-    index_phase = rng.choice(np.arange(0, num_phases_init), size=num_random_phase, replace=False)
+        rng = np.random.default_rng()
 
-    with open(dir_fortran_code, 'w') as f:
-        f.write(f'{num_random_phase}\n')
-        observ_data_init.iloc[index_phase].sort_values(by='phase').to_csv(f, index=False,
-                                                                          columns=['phase', 'Bl', 'errBl'],
-                                                                          header=False, sep=' ')
+        index_phase = rng.choice(np.arange(0, num_phases_init), size=num_random_phase, replace=False)
 
-    observ_data_init.iloc[index_phase].sort_values(by='phase').to_csv('Test_synt_data.csv', index=False,
-                                                                      columns=['phase', 'Bl', 'errBl'])
+        dir_fortran_code = f'./Fortran_code/fortran_data_{i+1}.dat'
 
-    star_results = process_star_data(star + f'_{num_random_phase}', python_compute=False, phase_mode=True)
+        if phase_mode_test:
+            with open(dir_fortran_code, 'w') as f:
+                f.write(f'{num_random_phase}\n')
+                observ_data_init.iloc[index_phase].sort_values(by='phase').to_csv(f, index=False,
+                                                                                  columns=['phase', 'Bl', 'errBl'],
+                                                                                  header=False, sep=' ')
+
+            observ_data_init.iloc[index_phase].sort_values(by='phase').to_csv('Test_synt_data.csv', index=False,
+                                                                              columns=['phase', 'Bl', 'errBl'])
+        else:
+            with open(dir_fortran_code, 'w') as f:
+                f.write(f'{num_random_phase}\n')
+                observ_data_init.iloc[index_phase].sort_values(by='phase').to_csv(f, index=False,
+                                                                                  columns=['Bl', 'errBl'],
+                                                                                  header=False, sep=' ')
+
+            observ_data_init.iloc[index_phase].sort_values(by='phase').to_csv(f'Test_synt_data_{i+1}.csv', index=False,
+                                                                              columns=['Bl', 'errBl'])
+
+    # star_results = process_star_data(star + f'_woutphi_{num_random_phase}', python_compute=False, phase_mode=False)

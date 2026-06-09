@@ -21,3 +21,5 @@ make_python_bib: prog magnetic_model.f95
   -lgomp \
   -m magnetic_model
 	mv magnetic_model.cpython-312-x86_64-linux-gnu.so ../magnetic_model.cpython-312-x86_64-linux-gnu.so
+compute_test: prog
+	./prog
