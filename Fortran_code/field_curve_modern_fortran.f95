@@ -1,8 +1,9 @@
 program fldcurv
     use magnetic_model
+    use omp_lib
     implicit none
 
-    integer :: i, j, num_observ, num_phases, num_i, num_beta, num_bp0, loc_max(3)
+    integer :: i, j, num_observ, num_phases, num_i, num_beta, num_bp0, loc_max(3), num_threads
     real(8) :: t1, t2
     real(8), allocatable, dimension(:) :: observ_magnetic_field, observ_err_magnetic_field
     real(8), allocatable, dimension(:) :: phase_vector, i_vector, beta_vector, bp0_vector
@@ -25,6 +26,8 @@ program fldcurv
     ! И последнее число количество фаз.
 
     read(15, *) num_observ
+
+    num_threads = omp_get_num_threads()
 
     allocate(i_vector(1:num_i), beta_vector(1:num_beta), bp0_vector(1:num_bp0))
     allocate(observ_magnetic_field(1:num_observ), observ_err_magnetic_field(1:num_observ))
@@ -51,7 +54,7 @@ program fldcurv
 
         call cpu_time(t2)
 
-        write(*, *) 'Time compute:', (t2 - t1) / 16, 'c'
+        write(*, *) 'Time compute:', (t2 - t1) / num_threads, 'c'
 
     else
 
@@ -72,7 +75,7 @@ program fldcurv
 
         call cpu_time(t2)
 
-        write(*, *) 'Time compute:', (t2 - t1) / 16, 'c'
+        write(*, *) 'Time compute:', (t2 - t1) / num_threads, 'c'
 
     end if
 

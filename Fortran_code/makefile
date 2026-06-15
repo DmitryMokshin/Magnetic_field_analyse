@@ -1,7 +1,7 @@
 comp:=gfortran
 pattern:=*.f95
 paral:=-fopenmp
-opt:=-O2
+opt:=-O2 -mcpu=native -mtune=native -funroll-loops
 source:=$(wildcard $(pattern))
    obj:=$(patsubst %.f95, %.o, $(source))
 prog: $(obj)

@@ -262,7 +262,7 @@ def analyze_and_visualize_posterior(log_posterior_map, beta_vec, i_vec, bp_vec, 
         plot_filename = f"{star_name}_corner_plot.png"
         plt.savefig(plot_filename, dpi=300)
         print(f"\n[График сохранен]: {plot_filename}")
-        plt.show()
+        plt.close()
 
     return {
         "detected_modes_count": len(modes),
@@ -276,9 +276,11 @@ def analyze_and_visualize_posterior(log_posterior_map, beta_vec, i_vec, bp_vec, 
 # MAIN PIPELINE FUNCTION
 # ==================================================================
 
-def process_star_data(star_name, observ_data='Test_synt_data.csv', python_compute=False, phase_mode=True):
+def process_star_data(star_name, observ_data='Test_synt_data.csv',
+                      fortran_out_name='./Fortran_code/fortran_maps_output.dat', python_compute=False, phase_mode=True):
     """
 
+    :param fortran_out_name:
     :param star_name: string: Название звезды
     :param observ_data: string: путь к файлу с наблюдаемыми данными, нужен только для подхода через питон.
     :param python_compute: logical: переменная включения и отключения работы через питон
@@ -323,7 +325,7 @@ def process_star_data(star_name, observ_data='Test_synt_data.csv', python_comput
         t2 = time.time()
         print(f"Compute time: {t2 - t1:.2f} s")
     else:
-        data = np.loadtxt("./Fortran_code/fortran_maps_output.dat")
+        data = np.loadtxt(fortran_out_name)
         assert data.shape == (num_beta * num_i, num_bp0)
         log_posterior_map = data.reshape((num_beta, num_i, num_bp0))
 
@@ -425,15 +427,15 @@ def compute_period_by_ls(time_series, magnetic_field_long, err_magnetic_field_lo
 
 
 if __name__ == '__main__':
-    star = "52her_liter"
+    star = "HD34736" # 52her_liter
     num_random_phase = 5
 
-    num_of_test = 20
+    num_of_test = 100
 
     dir_name_test_star = 'test_stars'
 
-    jd0 = 2453600.975
-    p0 = 3.8575
+    jd0 = 2457084.6555 # 2453600.975
+    p0 = 1.2799885 # 3.8575
 
     phase_mode_test = False
 
@@ -457,7 +459,7 @@ if __name__ == '__main__':
 
         index_phase = rng.choice(np.arange(0, num_phases_init), size=num_random_phase, replace=False)
 
-        dir_fortran_code = f'./Fortran_code/fortran_data_{i+1}.dat'
+        dir_fortran_code = f'./Fortran_code/fortran_data_{i + 1}.dat'
 
         if phase_mode_test:
             with open(dir_fortran_code, 'w') as f:
@@ -475,7 +477,13 @@ if __name__ == '__main__':
                                                                                   columns=['Bl', 'errBl'],
                                                                                   header=False, sep=' ')
 
-            observ_data_init.iloc[index_phase].sort_values(by='phase').to_csv(f'Test_synt_data_{i+1}.csv', index=False,
+            observ_data_init.iloc[index_phase].sort_values(by='phase').to_csv(f'Test_synt_data_{i + 1}.csv',
+                                                                              index=False,
                                                                               columns=['Bl', 'errBl'])
 
-    # star_results = process_star_data(star + f'_woutphi_{num_random_phase}', python_compute=False, phase_mode=False)
+    # for i in range(num_of_test):
+    #     star_results = process_star_data(star + f'_woutphi_{num_random_phase}_{i + 1}',
+    #                                      fortran_out_name=f'./Fortran_code/fortran_maps_output_{i + 1}.dat',
+    #                                      python_compute=False, phase_mode=False)
+    #
+    #     print(star_results)
