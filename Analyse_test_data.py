@@ -1,12 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
 from Bayesian_approach import process_star_data
 
 
 # =================================================================
-# ФУНКЦИЯ ДЛЯ ОТРИСОВКИ (чтобы не дублировать код для двух картинок)
+# ФУНКЦИЯ ДЛЯ ОТРИСОВКИ
 # =================================================================
+
 def plot_mode_results(mode_num, bp_data, i_data, beta_data, marker, color_theme):
     fig, axes = plt.subplots(3, 1, figsize=(10, 12), sharex=True)
 
@@ -16,17 +16,20 @@ def plot_mode_results(mode_num, bp_data, i_data, beta_data, marker, color_theme)
     plots_config = [
         {
             'ax': axes[0], 'means': bp_data['means'], 'errs': bp_data['errs'],
-            'best_mean': best_model_bp_mean, 'best_err': best_model_err_bp_mean,
+            'best_mean': best_model_bp_mean,
+            'best_err_down': best_model_err_bp_down, 'best_err_up': best_model_err_bp_up,
             'ylabel': '$B_p$ [kG]', 'color': color_theme['bp']
         },
         {
             'ax': axes[1], 'means': i_data['means'], 'errs': i_data['errs'],
-            'best_mean': best_model_i_mean, 'best_err': best_model_err_i_mean,
+            'best_mean': best_model_i_mean,
+            'best_err_down': best_model_err_i_down, 'best_err_up': best_model_err_i_up,
             'ylabel': 'Inclination, $i$ [deg]', 'color': color_theme['i']
         },
         {
             'ax': axes[2], 'means': beta_data['means'], 'errs': beta_data['errs'],
-            'best_mean': best_model_beta_mean, 'best_err': best_model_err_beta_mean,
+            'best_mean': best_model_beta_mean,
+            'best_err_down': best_model_err_beta_down, 'best_err_up': best_model_err_beta_up,
             'ylabel': 'Obliquity, $\\beta$ [deg]', 'color': color_theme['beta']
         }
     ]
@@ -34,11 +37,11 @@ def plot_mode_results(mode_num, bp_data, i_data, beta_data, marker, color_theme)
     for config in plots_config:
         ax = config['ax']
 
-        # Линия и зона погрешности эталона (Best Model)
+        # Линия и зона асимметричной погрешности эталона (Best Model)
         ax.axhline(config['best_mean'], color='red', linestyle='--', linewidth=1.8, label='Best model')
         ax.fill_between(models,
-                        config['best_mean'] - config['best_err'],
-                        config['best_mean'] + config['best_err'],
+                        config['best_mean'] - config['best_err_down'],
+                        config['best_mean'] + config['best_err_up'],
                         color='red', alpha=0.12)
 
         # Точки вычисленных значений моды
@@ -63,21 +66,24 @@ if __name__ == '__main__':
     # Определение эталонных значений и названия звезды, а также параметров теста
     # ==============================================================
 
-    star_name = 'hd34736'
+    star_name = 'alpha2cvn'
     num_of_test = 100
-    num_random_phase = 5
+    num_random_phase = 6
 
     dir_data = f'./test_star_result_{star_name}/result_posterior_maps/'
 
     # Эталонные значения (лучшие модели) в градусах и кГс
-    best_model_bp_mean = 18.9
-    best_model_err_bp_mean = 0.8
+    best_model_bp_mean = 3.460
+    best_model_err_bp_down = 2.290  # Нижняя ошибка
+    best_model_err_bp_up = 0.690    # Верхняя ошибка
 
-    best_model_i_mean = 68
-    best_model_err_i_mean = 7
+    best_model_i_mean = 48
+    best_model_err_i_down = 35     # Нижняя ошибка
+    best_model_err_i_up = 21       # Верхняя ошибка
 
-    best_model_beta_mean = 83
-    best_model_err_beta_mean = 2
+    best_model_beta_mean = 82
+    best_model_err_beta_down = 4  # Нижняя ошибка
+    best_model_err_beta_up = 42    # Верхняя ошибка
 
     models = list(range(1, num_of_test + 1))
 
@@ -147,12 +153,12 @@ if __name__ == '__main__':
     print(f'Среднее дипольное поле мода 2 {round(np.mean(bp_2_means), 1)} +- {round(np.std(bp_2_means), 1)}')
 
     print('=' * 30)
-    print(f'Среднее дипольное поле мода 1 {round(np.mean(i_1_means), 1)} +- {round(np.std(i_1_means), 1)}')
-    print(f'Среднее дипольное поле мода 2 {round(np.mean(i_2_means), 1)} +- {round(np.std(i_2_means), 1)}')
+    print(f'Среднее наклонение мода 1 {round(np.mean(i_1_means), 1)} +- {round(np.std(i_1_means), 1)}')
+    print(f'Среднее наклонение мода 2 {round(np.mean(i_2_means), 1)} +- {round(np.std(i_2_means), 1)}')
 
     print('=' * 30)
-    print(f'Среднее дипольное поле мода 1 {round(np.mean(beta_1_means), 1)} +- {round(np.std(beta_1_means), 1)}')
-    print(f'Среднее дипольное поле мода 2 {round(np.mean(beta_2_means), 1)} +- {round(np.std(beta_2_means), 1)}')
+    print(f'Средний угол бета мода 1 {round(np.mean(beta_1_means), 1)} +- {round(np.std(beta_1_means), 1)}')
+    print(f'Средний угол бета мода 2 {round(np.mean(beta_2_means), 1)} +- {round(np.std(beta_2_means), 1)}')
 
 
     theme_1 = {'bp': '#1f77b4', 'i': '#2ca02c', 'beta': '#ff7f0e'}
